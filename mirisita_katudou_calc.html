@@ -1,0 +1,634 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name=viewport content="width=device-width, initial-scale=1">
+<STYLE type="text/css">
+<!--
+textarea {
+max-width:400px;
+max-height:200px;
+resize: none;
+}
+-->
+</STYLE>
+<title>みりしたかつどうけいさん</title>
+</head>
+<body>
+<script type="text/javascript" src="./LIB/google.js"></script>
+<!--日付変更にmomentjisを使用、ろーかるで動かすにはhttp://momentjs.com/　が必要-->
+<script type="text/javascript" src="./LIB/moment-with-locales.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+<script type="text/javascript" src="./LIB/xdomain.js"></script>
+<script type="text/javascript">
+<!--
+
+
+function stringfilter(text){
+var RTB = [];//１日分なら配列1500ぐらい,いべ最大13日*24時間*60分=配列18720
+var rt= document.trg.event.options[document.trg.event.selectedIndex].text;
+var tf=document.tt.time.options[document.tt.time.selectedIndex].text;
+var day_index=document.DD.dy.selectedIndex;
+var tz=document.tzone.owata.options[document.tzone.owata.selectedIndex].text;
+var BYEAR=document.YN.yn.options[document.YN.yn.selectedIndex].text;
+var BYEARN="";
+var headyear =text.match(/\[(201[0-9])\]/);
+if(headyear!=null){
+BYEAR=headyear[1];
+}
+var detectday =["","ddd","dddd","dddJ","(ddd)J","（ddd）J","ddddJ","(dddd)J","（dddd）J"];
+var tosikosi=false;
+if(text.indexOf("※12/31")>0 && text.indexOf("※01/01")>0 ){
+tosikosi = true;
+}
+var tzm =tz.match(/-?\d+/g);
+var t_offset=0;
+var t_offset_min=0;
+if(tzm!=null){
+t_offset=parseInt(tzm[0]);
+if(tzm[1]!=null){
+t_offset_min=(parseInt(tzm[1]));
+if(t_offset<0){
+t_offset_min=-t_offset_min;
+}
+}
+}
+var bym =BYEAR.match(/-?\d+/);
+if(bym!=null){
+var y=parseInt(bym[0]);
+BYEARN=String(y+1);
+}
+var TYEAR=BYEAR+"/";
+if(tf==null){
+tf="YYYY/MM/DD HH:mm"
+}
+tf=tf.replace("2014","YYYY")
+.replace("14","YY")
+.replace("H","[H]")
+.replace("26","Ｈ")
+.replace("02","MM")
+.replace("27","DD")
+.replace("17:00","HH:mm")
+.replace("17時00分","HH時mm分");
+moment.lang("en");
+if(document.DD.dy.selectedIndex>0){
+var tfs= tf.split("HH");
+tf=tfs[0]+detectday[document.DD.dy.selectedIndex]+" HH"+tfs[1];
+if(tf.indexOf("J")>0){
+tf=tf.replace("J","");
+moment.lang("ja");
+}
+}
+
+
+
+//text=text.replace(new RegExp("(1|10)位","gm"),"");
+
+
+var num_lf = new RegExp("([0-9][ 　\t]+pt)[ 　\t]+", 'g');
+
+text=text.replace(num_lf,"$1 \n")
+.replace(new RegExp("コ[ミド]ユ","gm"),"コミュ")
+.replace(new RegExp("AII","gm"),"All")
+.replace(new RegExp("Aタイプ","gm"),"Allタイプ")
+.replace(new RegExp("ライプ","gm"),"ライブ")
+.replace(new RegExp("覺醒","gm"),"覚醒")
+.replace(new RegExp("ライ[プブ]フルコンポ","gm"),"ライブフルコンボ")
+.replace(new RegExp("Screenshot_(20[0-9][0-9])([0-9][0-9])([0-9][0-9])[\-_]([0-9][0-9])([0-9][0-9])","gm"),"$1/$2/$3 $4:$5");
+
+var lf = text.split("\n");
+var str ="";
+var btmp=[];
+var head=new Array(undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined);
+var regdt = new RegExp("(20[0-9][0-9]/[0-9]{1,2}/[0-9]{1,2}).*?([0-9]{1,2}:[0-9]{1,2})");
+//Screenshot_20180921-003033
+
+
+var seek=[
+["出勤日数","日"],
+["覚醒回数","回"],
+["マスターレッスン回数","回"],
+["カード枚数","枚"],
+["ファン数","人"],
+["メインコミュ達成数","本"],
+["メモリアルコミュ達成数","本"],
+["エピソードコミュ達成数","本"],
+["ライブ成功回数","回"],
+["ライブフルコンボ回数","回"],
+["フラスタを貰った数","回"],
+["フラスタを贈った数","回"],
+["お仕事回数","回"],
+["オファー回数","回"],
+["入手衣装数","着"],
+["プロデューサーゲージMAX回数","回"],
+["Allタイプ楽曲ハイスコア",".*?Q"],
+["Princessタイプ楽曲ハイスコア",".*?Q"],
+["Fairyタイプ楽曲ハイスコア",".*?Q"],
+["Angelタイプ楽曲ハイスコア",".*?Q"]
+];
+
+var seekshort=[
+["出","日"],
+["覚","回"],
+["マ","回"],
+["カ","枚"],
+["ファ","人"],
+["メイ","本"],
+["メモ","本"],
+["エ","本"],
+["ラ","回"],
+["コ","回"],
+["貰","回"],
+["贈","回"],
+["仕","回"],
+["オ","回"],
+["衣","着"],
+["ゲ","回"],
+["A",".*?Q"],
+["P",".*?Q"],
+["F",".*?Q"],
+["A",".*?Q"]
+];
+
+//2018/06/17　13:54
+
+var k=0,t=0;
+var MAXLEN=19;
+
+var count=0;
+var seeder="";
+var seederctst="";
+var RTB=[];
+RTB[0]={};
+
+for( var i = 0 , l = lf.length; i < l ; i++ ){
+str= lf[i];
+if(count<19){
+for(var j=count;j<19;j++){
+seeder=seek[j][0];
+if(str.match(seeder)!=null){
+count=j;
+seederctst="[0-9]+(,[0-9]{3})*"+seek[count][1];//すこあが拾いづらい、6７桁にきりかえるか
+if(seek[count][1]==".*?Q"){
+seederctst="([0-9]+,)?([0-9]+)(,[0-9]+)";//すこあが拾いづらい、6７桁
+}
+break;
+}
+}
+if(str.match(seederctst)!=null){
+var matchst=str.match(seederctst);
+if(RTB[k][seek[count][0]]==null){
+RTB[k][seek[count][0]]=matchst[0];
+//count++;
+}
+}
+}
+if(str.match(regdt)!=null){
+var timem=str.match(regdt);
+RTB[k]["time"]=timem[1]+" "+timem[2];
+k++;
+count=0;
+RTB[k]={};
+}
+
+
+}
+RTB.length=RTB.length-1;
+
+var swap=document.tsort.event.selectedIndex;
+//if(document.tsort.event.selectedIndex>0){
+RTB.sort(cmp_dt2);
+//}
+//else{
+//RTB.sort(cmp_dt);
+//}
+
+
+var st="";
+//JSON.stringify(RTB);
+var seeksh=document.getElementById("HD").checked;
+
+st += RTB[1].time +"→"+RTB[0].time+"\r\n";
+for(var i=0;i<seek.length;i++){
+if(seeksh){
+st += seekshort[i][0]+":";
+}
+else{
+st += seek[i][0]+":";
+}
+st +=RTB[1][seek[i][0]] +"→"
++RTB[0][seek[i][0]];
+
+
+if(RTB[1][seek[i][0]]!=undefined &&RTB[0][seek[i][0]]!=undefined){
+st +="("+CAL(RTB[1][seek[i][0]],RTB[0][seek[i][0]]);
+}
+
+st +=seek[i][1]+")\r\n";
+}
+
+var s= JSON.stringify(RTB);
+
+if(seeksh){
+st =st.replace(/20[0-9][0-9]\//gm,"");
+st =st.replace(/[日回人着本枚]/gm,"");
+s =s.replace(/[日回人着本枚]\"/gm,"\"");
+}
+
+
+st =st.replace(/undefined/gm,"--");
+st =st.replace(/\(?Q/gm,"");
+st =st.replace(/\.\*\?Q?/gm,"");
+st =st.replace(/ +\)$/gm,"");
+
+document.cvcode.elements[0].value = st;
+
+
+var gs=document.getElementById("JS").checked;
+if(gs){
+
+s=s.replace(/},/gm,"}\r\n,\r\n");
+      w = window,d = w.document;
+     //だうんろーどしょり
+     TextDL(s, "mirisita_json.txt");
+     }
+     
+return false;
+}
+
+
+    function TextDL(text, name) {
+        //ファイルを作成
+        b = new Blob([text], {
+            type: "text/plain"
+        })
+
+        //a要素を作る
+        a = document.createElement('a')
+            //ダウンロードする名前をセット
+        a.download = name;
+        //ダウンロードするファイルをセット
+        a.href = window.URL.createObjectURL(b)
+
+        //イベントを作る
+        e = document.createEvent('MouseEvent')
+        e.initEvent("click", true, true)
+            //a要素をクリック
+        a.dispatchEvent(e)
+    }
+
+
+function getnum(num) {
+num = num.replace(/,/gm,"");
+var m = num.match(/[0-9]+/);
+return m;
+}
+function CAL(a,b){
+return getnum(b)-getnum(a);
+}
+
+
+function cmp_dt(ldt, rdt) {
+return moment(ldt.time,"YYYY/MM/DD HH:mm") - moment(rdt.time,"YYYY/MM/DD HH:mm");
+}
+function cmp_dt2(ldt, rdt) {
+return moment(rdt.time,"YYYY/MM/DD HH:mm") - moment(ldt.time,"YYYY/MM/DD HH:mm");
+}
+function swap_cal(c,a){
+return (c)?-a:a;
+}
+var cmsuuji=function(c,d){
+return  (c!=true) ? d : addc(d);
+}
+function addc(a){
+return String(a).replace( /(\d)(?=(\d\d\d)+(?!\d))/g, '$1,' );
+}
+function rmc(a){
+return parseInt(a.replace(new RegExp(",", 'g'), ""));
+}
+function PADLEFT(s,r,k,pt){
+var n=String(s).length;
+if(pt){
+if(n<k){
+for(var i=0;i<k;i++){
+s= r+s;
+}
+if(s.length>k){
+if(s.indexOf("-")>=0){
+s="-"+s.replace("-","");
+}
+if(s.indexOf("nbsp")>0){
+s=s.slice(-n-(k-n)*6);
+}
+else{
+s=s.slice(-k);
+}
+}
+}
+}
+
+return s;
+}
+
+function tmcv(dt,tf,t_offset,t_offset_min){
+var m = moment(dt,"YYYY/MM/DD HH:mm");	if(t_offset!=9 || t_offset_min!=0){
+m.add('hours',-9);
+m.add('hours',t_offset);
+m.add('minutes',t_offset_min);
+}
+if(tf.indexOf("d")>=0){
+var day= tf.match(/d+/g);
+if(day!=null){
+tf=tf.replace(new RegExp(day[0],"g"),"["+m.format(day[0])+"]");
+}
+}
+if(tf.indexOf("Ｈ")>=0){
+	    var year = m.format('YYYY');
+        tf = tf.replace("Ｈ", "YY");
+        if(year>2018){
+         m.add('years', -18);
+         if(year==2019 && tf.indexOf("平成")>=0){         
+        tf=tf.replace("YY","元");
+         }
+        tf=tf.replace("平成","新元号");
+        tf=tf.replace("[H]","[NewEmperor]");
+        }
+        else{
+        m.add('years', 12);
+        }
+}
+return m.format(tf);
+}
+function rmhtml(a){
+a=a.replace(new RegExp("\</td\>", 'gm'), "\t")
+.replace(new RegExp("\<br/?\>", 'gm'), "\n")
+.replace(new RegExp("\</p\>", 'gm'), "\n")
+.replace(new RegExp("\</tr\>", 'gm'), "\n")
+.replace(new RegExp("\<.*?\>", 'gm'), "");
+return a;
+}
+function fix_url(a){
+if(a.indexOf("http")>=0){
+}
+else if(a.indexOf("ttp")>=0){
+a = "h"+a;
+}
+else{
+a= "http"+a;
+}
+return a.replace("http://127.0.0.1:8823/thread/","");
+}
+function parseData(data){
+stringfilter(rmhtml(data));
+}
+function getweb(urls){
+var local= new RegExp("(\.\/[a-zA-Z0-9_\-]+)\.txt");
+var uri= new RegExp("(h?ttps?)?(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)");
+var lcmm=urls.match(local);
+var urlm=urls.match(uri);
+var text="";
+var your_url="";
+if(lcmm!=null){
+your_url=lcmm[0];
+$.get(your_url,parseData);
+}
+else if(urlm!=null){
+your_url=fix_url(urlm[0]);
+text ="";
+$.ajax({
+url: your_url,
+type: 'GET',
+timeout: 10000,
+success: function(res) {
+text = res.responseText;
+stringfilter(rmhtml(text));
+}
+});
+}
+return false;
+}
+-->
+</script>
+<a href="./index.html">TOP</a><br>
+<H1>みりしたかつどうけいさんき</H1>
+<p>みりした活動記録からのスクショをGOOGLEどらいぶにうｐ<br>
+パソコンからアプリで開くでごっごるドキュメントで開き<br>
+文字起こし、一番下に日時を足すだけあとは２つ並べて計算<br>
+<a href="https://photos.app.goo.gl/vcLgi1oWo1KnoSAZ6">使用例</a><br>
+
+(<a href ="mirikatu.txt">ごっごるOCRテキスト例</a>)
+2018/06/17 15:54　←これだけ追加
+
+</p>
+<form name="YN">
+<b>開始年</b><br>
+<select name="yn">
+<option value="">2018</option>
+<option value="">2017</option>
+<option value="">2016</option>
+<option value="">2015</option>
+<option value="">2014</option>
+</select>
+</form>
+<form name="tt">
+<b>日付時刻表記</b><br>
+<select name="time">
+<!-- みります1周年 -->
+<option selected="selected" value="">2014/02/27 17:00</option>
+<option value="">02/27 17:00</option>
+<option value="">17:00</option>
+<option value="">2014-02-27 17:00</option>
+<option value="">2014年02月27日 17時00分</option>
+<option value="">2014/27/02 17:00</option>
+<option value="">2014-27-02 17:00</option>
+<option value="">14/02/27 17:00</option>
+<option value="">14-02-27 17:00</option>
+<option value="">26/02/27 17:00</option>
+<option value="">26-02-27 17:00</option>
+<option value="">H26/02/27 17:00</option>
+<option value="">H26-02-27 17:00</option>
+<option value="">14/27/02 17:00</option>
+<option value="">14-27-02 17:00</option>
+<option value="">26/27/02 17:00</option>
+<option value="">26-27-02 17:00</option>
+<option value="">H26/27/02 17:00</option>
+<option value="">H26-27-02 17:00</option>
+<option value="">14年02月27日 17時00分</option>
+<option value="">H26年02月27日 17時00分</option>
+<option value="">平成26年02月27日 17時00分</option>
+<option value="">02/27/2014 17:00</option>
+<option value="">02-27-2014 17:00</option>
+<option value="">27/02/2014 17:00</option>
+<option value="">27-02-2014 17:00</option>
+<option value="">02/27/14 17:00</option>
+<option value="">02-27-14 17:00</option>
+<option value="">02/27/26 17:00</option>
+<option value="">02-27-26 17:00</option>
+<option value="">02/27/H26 17:00</option>
+<option value="">02-27-H26 17:00</option>
+<option value="">27/02/14 17:00</option>
+<option value="">27-02-14 17:00</option>
+<option value="">27/02/26 17:00</option>
+<option value="">27-02-26 17:00</option>
+<option value="">27/02/H26 17:00</option>
+<option value="">27-02-H26 17:00</option>
+<option value="">02/27 17:00</option>
+<option value="">02-27 17:00</option>
+<option value="">02月27日 17時00分</option>
+<option value="">27/02 17:00</option>
+<option value="">27-02 17:00</option>
+<option value="">17時00分</option>
+</select>
+</form>
+<form name="DD">
+<b>曜日表記</b><br>
+<select name="dy">
+<option selected="selected" value=""></option>
+<option value="">Thu</option>
+<option value="">Thursday</option>
+<option value="">木</option>
+<option value="">(木)</option>
+<option value="">（木）</option>
+<option value="">木曜日</option>
+<option value="">(木曜日)</option>
+<option value="">（木曜日）</option>
+</select>
+</form>
+<form name="tzone">
+<!-- 
+http://support.microsoft.com/kb/973627/ja
+M$より機械翻訳とはいえ
+マーシャル諸島します。
+。ニュージーランド
+がきになる
+ -->
+<b>タイムゾーン</b><br>
+<select name="owata">
+<option value="">UTC -12:00　国際日付変更線西側</option>
+<option value="">UTC -11:00　ミッドウェー島</option>
+<option value="">UTC -10:00　ハワイ</option>
+<option value="">UTC -09:00　アラスカ</option>
+<option value="">UTC -08:00　(米国およびカナダ　; ティファナティファナ</option>
+<option value="">UTC -07:00　山岳部標準時:(米国およびカナダ　</option>
+<option value="">UTC -07:00　チワワ、ラパス、マサトラン</option>
+<option value="">UTC -07:00　アリゾナ州</option>
+<option value="">UTC -06:00　中部標準:(米国およびカナダ　</option>
+<option value="">UTC -06:00　サスカチェワン</option>
+<option value="">UTC -06:00　グアダラハラ、メキシコシティ、モンテレー</option>
+<option value="">UTC -06:00　中央アメリカ</option>
+<option value="">UTC -05:00　(米国およびカナダ）、東部標準時</option>
+<option value="">UTC -05:00　インディアナ (東部　</option>
+<option value="">UTC -05:00　ボゴタ、リマ、Quito</option>
+<option value="">UTC -04:00　大西洋標準:(カナダ　</option>
+<option value="">UTC -04:00　ジョージタウン、ラパス、サンフアン</option>
+<option value="">UTC -04:00　サンティアゴ</option>
+<option value="">UTC -03:30　ニューファンドランド</option>
+<option value="">UTC -03:00　ブラジリア</option>
+<option value="">UTC -03:00　ジョージタウン</option>
+<option value="">UTC -03:00　グリーンランド</option>
+<option value="">UTC -02:00　中央大西洋</option>
+<option value="">UTC -01:00　アゾレス諸島</option>
+<option value="">UTC -01:00　カーボベルデ諸島</option>
+<option value="">UTC　ダブリン、エジンバラ、リスボン、ロンドン、グリニッジ標準時、世界協定時刻</option>
+<option value="">UTC　モンロビア、レイキャビク</option>
+<option value="">UTC +1:00　サニーベイル, カリフォルニア州、ブラチスラバ、ブダペスト、Ljubljana、プラハ</option>
+<option value="">UTC +1:00　サラエボ、Skopje、ワルシャワ、Zagreb</option>
+<option value="">UTC +1:00　ブリュッセル、コペンハーゲン、マドリッド、パリ</option>
+<option value="">UTC +1:00　アムステルダム、ベルリン、ベルン、ローマ、ストックホルム、ウィーン</option>
+<option value="">UTC +1:00　西中央アフリカ</option>
+<option value="">UTC +02:00　ミンスク</option>
+<option value="">UTC +02:00　カイロ</option>
+<option value="">UTC +02:00　ヘルシンキ、キエフ、リガ、ソフィア、Tallinn、Vilnius</option>
+<option value="">UTC +02:00　アテネ、ブカレスト、イスタンブール</option>
+<option value="">UTC +02:00　エルサレム</option>
+<option value="">UTC +02:00　ハラレ、プレトリア</option>
+<option value="">UTC +03:00　モスクワ、サンクト ペテルスブルグ、ボルゴグラード</option>
+<option value="">UTC +03:00　クウェート、リヤド</option>
+<option value="">UTC +03:00　ナイロビ</option>
+<option value="">UTC +03:00　バグダッド</option>
+<option value="">UTC +03:30　テヘラン</option>
+<option value="">UTC +04:00　アブダビ、マスカット</option>
+<option value="">UTC +04:00　バクー、トビリシ、エレバン</option>
+<option value="">UTC +04:30　カブール</option>
+<option value="">UTC +05:00　エカテリンブルク</option>
+<option value="">UTC +05:00　タシケント</option>
+<option value="">UTC +05:30　チェンナイ、カルカッタ、ムンバイ、ニューデリー</option>
+<option value="">UTC +05:45　カトマンズ</option>
+<option value="">UTC +06:00　アスタナ、ダッカ</option>
+<option value="">UTC +06:00　スリジャヤワルダナプラコッテ</option>
+<option value="">UTC +06:00　アルマアトイ、ノボシビルスク</option>
+<option value="">UTC +06:30　ヤンゴン (ラングーン　</option>
+<option value="">UTC +07:00　バンコク、ハノイ、ジャカルタ</option>
+<option value="">UTC +07:00　クラスノヤルスク</option>
+<option value="">UTC +08:00　北京、重慶、ホンコン、ウルムチ</option>
+<option value="">UTC +08:00　マレーシア. クアラルンプール、シンガポール</option>
+<option value="">UTC +08:00　台北</option>
+<option value="">UTC +08:00　パース</option>
+<option value="">UTC +08:00　イルクーツク、ウランバートル</option>
+<option value="">UTC +09:00　ソウル</option>
+<option selected="selected" value="">UTC +09:00　大阪、札幌、東京</option>
+<option value="">UTC +09:00　ヤクーツク</option>
+<option value="">UTC +09:30　ダーウィン</option>
+<option value="">UTC +09:30　アデレード</option>
+<option value="">UTC +10:00　キャンベラ、メルボルン、シドニー</option>
+<option value="">UTC +10:00　ブリスベン</option>
+<option value="">UTC +10:00　ホバート</option>
+<option value="">UTC +10:00　ウラジオ ストック</option>
+<option value="">UTC +10:00　グアム、ポートモレスビー</option>
+<option value="">UTC +11:00　マガダン、ソロモン諸島、ニューカレドニア</option>
+<option value="">UTC +12:00　フィジー、カムチャツカ、マーシャル諸島</option>
+<option value="">UTC +12:00　オークランド、ウェリントン</option>
+<option value="">UTC +13:00　キリバス、サモア、トケラウ、トンガ、ニュージーランド夏、フィジー夏</option>
+<option value="">UTC +14:00　サモア夏</option>
+
+</select>
+</form>
+<form name="trg">
+<b>時刻正規マッチ</b><br>
+<select name="event">
+<option value="">(※指定なし,上限まで)?</option>
+</select>
+</form>
+<form name="tsort">
+<b>時刻ソート</b><br>
+<select name="event">
+<option value="">降順(新→古)</option>
+<!--<option value="">昇順(古→新)</option>-->
+</select>
+</form>
+<form name="output">
+<b>出力オプション</b><br>
+<label for="HD"><input type="checkbox"  value="NEW" id="HD">短縮表示<br></label>
+<label for="JS"><input type="checkbox"  value="NEW" id="JS">JSONもだうんろ～ど<br></label>
+</form><br>
+<form name="rtbcode">
+<textarea name="r_text" rows="10" cols="200">./mirikatu.txt</textarea><br>
+<input type="Submit" value="Convert" Generate" onclick="stringfilter(document.rtbcode.r_text.value);return false">
+<input type="Submit" value="test" Generate" onclick="getweb(document.rtbcode.r_text.value);return false">
+<input type="reset" value="Clear">
+</form>
+<form name="cvcode">
+<textarea name="c_text" rows="30" cols="200"></textarea>
+</form>
+<p>
+<a name="BR"><h4>・動作確認済ブラウザ<br></a>
+PC:IE11,FIREFOX,CHROME<br>
+iOS:SAFARI<br>
+ANDROID:CHROME,FIREFOX　（※標準ブラウザ他は変換行数制限があるようなので非推奨)<br>
+</h4>
+</p><p>
+<a name="outlim"><font color="blue">※設定例</font></a><bt>
+0=全配列<br>
+ｘ=ｘ～最大数(x=１だと 最大-1行分)<br>
+-ｘ=最大数-ｘ～最大数まで(x=-1だと2行分のみ)
+</p>
+<pre>
+<b>更新履歴</b>
+2018/06/17
+みりした活動計算開始
+DLJSONを追加
+
+使用JSライブラリ:jquery,xdomian,moment.js
+</pre>
+</body>
+</html>

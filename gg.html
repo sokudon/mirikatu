@@ -1,0 +1,76 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name=viewport content="width=device-width, initial-scale=1">
+<title>GoogleスプレットシートAPIテスト</title>
+<script type="text/javascript" src="./LIB/google.js"></script>
+<!--日付変更にmomentjisを使用、ろーかるで動かすにはhttp://momentjs.com/　が必要-->
+<script type="text/javascript" src="./LIB/moment-with-locales.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+<script type="text/javascript" src="./LIB/xdomain.js"></script>
+<script type="text/javascript" src="./dt_json/high_title.js"></script>
+<script type="text/javascript">
+<!--
+
+function checkJSON(){
+  try {
+  var JSON_OK= JSON.parse(clear(document.getElementById("BD_JSON").value));
+  return confirm("送信しても良いですか？");
+  } catch(e){
+  alert(e);
+  return false;
+  }
+  
+}
+
+
+function clear(s){
+var del=document.getElementById("HD").checked;
+var qs=document.getElementById("TT").checked;
+if(del){
+s =s.replace(/[日回人着本枚]\"/gm,"\"");
+s =s.replace(/[ 　]+.*?Q/gm,"");
+}
+if(qs){
+s=timeqs(s);
+}
+document.getElementById("BD_JSON").value=s;
+
+return s;
+}
+
+function timeqs(s){
+var t=JSON.parse(s);
+
+t.sort(function(a,b){
+    return moment(a.time) - moment(b.time);
+});
+
+return JSON.stringify(t);
+}
+
+
+
+var z=0;//ula=2,fes0,
+
+-->
+</script>
+</head>
+<body>
+<iframe src="#" id="fake-target" name="fake-target" style="width:0px; height:0px; border:0px;">
+</iframe>
+
+<b>すぷれっどしーとにまとめでーた(JSON)送信するさんぷる<br>
+<label for="TT"><input type="checkbox" checked="checked"  value="NEW" id="TT">QS時刻-昇順<br></label>
+<label for="HD"><input type="checkbox" checked="checked"  value="NEW" id="HD">回数除去<br></label>
+<form id="formID" action="https://script.google.com/macros/s/AKfycbzlhjOfhCB57UWLKEoX1-rrIv4MwwviUkL3xasT73Po1jJn6k4/exec" method="post" onSubmit="return checkJSON()">
+<form name="BD__JS">
+JSONでーた(認証後だれでも送信可能,JSONは一番上のいべとっぷぼだ部分／DBでも作成可能)<br>)：<br>
+<textarea rows="5" cols="40" name="BD_JSON" id="BD_JSON">
+</textarea>
+<br>
+<input type="submit" value="すぷれっどしーとへ一括送信">
+</form>
+</body>
+</html>
